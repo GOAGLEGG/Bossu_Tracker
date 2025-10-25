@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Product Tracker</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <header>
+    <h1>Product Tracker</h1>
+  </header>
+
+  <main>
+    <form id="tracker-form" enctype="multipart/form-data" method="POST" action="javascript:void(0);">
+      <div class="form-group">
+        <label for="product-image">Product Image:</label>
+        <input type="file" id="product-image" name="product-image" accept="image/*" required />
+      </div>
+
+      <div class="form-group">
+        <label for="product-name">Product Name:</label>
+        <input type="text" id="product-name" name="product-name" placeholder="Enter product name" required />
+      </div>
+
+      <div class="form-group">
+        <label for="initial-price">Initial Price:</label>
+        <input type="number" id="initial-price" name="initial-price" placeholder="Enter initial price" step="0.01" required />
+      </div>
+
+      <div class="form-group">
+        <label for="current-price">Current Price:</label>
+        <input type="number" id="current-price" name="current-price" placeholder="Enter current price" step="0.01" required />
+      </div>
+
+      <button type="submit">Add Product</button>
+    </form>
+
+    <section id="product-list">
+      <h2>Tracked Products</h2>
+      <div id="products"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Product Tracker</p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/tracker.js') }}"></script>
+</body>
+</html>
