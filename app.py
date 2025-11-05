@@ -22,7 +22,7 @@ def upload():
     initial_price = float(request.form.get('initial-price') or 0)
     current_price = float(request.form.get('current-price') or 0)
     ad_value = float(request.form.get('ad-value') or 0)
-    active_until = request.form.get('active-until', or '1001-01-01')
+    active_until = request.form.get('active-until') or '1001-01-01'
 
     image = request.files.get('product-image')
     image_filename = None
