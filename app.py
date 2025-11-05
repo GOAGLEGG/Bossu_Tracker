@@ -18,31 +18,35 @@ def home():
 
 @app.route('/upload', methods=['POST'])
 def upload():
-    name = request.form['product-name']
-    initial_price = request.form['initial-price']
-    current_price = request.form['current-price']
-    ad_value = request.form.get('ad-value', 0)
-    active_until = request.form.get('active-until', '')
-    image = request.files['product-image']
+    name = request.form.get('product-name', '')
+    initial_price = float(request.form.get('initial-price') or 0)
+    current_price = float(request.form.get('current-price') or 0)
+    ad_value = float(request.form.get('ad-value') or 0)
+    active_until = request.form.get('active-until', None)  # can be None
 
+    image = request.files.get('product-image')
+    image_filename = None
     if image:
-        image_path = os.path.join(app.config['UPLOAD_FOLDER'], image.filename)
+        image_filename = image.filename
+        image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
         image.save(image_path)
 
-        with get_conn() as conn:
-            cur = conn.cursor()
-            cur.execute("""
-                INSERT INTO products (name, image, initial_price, current_price, ad_value, active_until)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (name, image.filename, initial_price, current_price, ad_value, active_until))
-            conn.commit()
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO products (name, image, initial_price, current_price, ad_value, active_until)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (name, image_filename, initial_price, current_price, ad_value, active_until))
+        conn.commit()
 
-        return jsonify({
-            'name': name, 'image': image.filename,
-            'initial_price': initial_price, 'current_price': current_price,
-            'ad_value': ad_value, 'active_until': active_until
-        })
-    return 'No image uploaded', 400
+    return jsonify({
+        'name': name, 
+        'image': image_filename,
+        'initial_price': initial_price,
+        'current_price': current_price,
+        'ad_value': ad_value,
+        'active_until': active_until
+    })
 
 @app.route('/products')
 def products():
