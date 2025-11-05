@@ -24,7 +24,9 @@ async function loadProducts() {
 function displayProduct(product) {
   const div = document.createElement('div');
   div.classList.add('product-item');
-  const profit = (product.current_price - product.initial_price).toFixed(2);
+  
+  const profit = (product.current_price - product.initial_price - product.ad_value).toFixed(2);
+
   div.innerHTML = `
     <img src="/uploads/${product.image}" alt="${product.name}" />
     <h3>${product.name}</h3>
@@ -41,6 +43,7 @@ function displayProduct(product) {
     <button onclick="updateProduct(${product.id})">Update</button>
     <button onclick="deleteProduct(${product.id})" style="background-color:red;">Delete</button>
   `;
+
   productList.appendChild(div);
 }
 
