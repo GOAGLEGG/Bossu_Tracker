@@ -1,41 +1,17 @@
 import os
-from flask import Flask, render_template, request, jsonify
 import psycopg2
-import cloudinary
-import cloudinary.uploader
+from flask import Flask, render_template, request, jsonify, send_from_directory
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = 'uploads'
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# --- PostgreSQL setup ---
-DATABASE_URL = os.environ.get("DATABASE_URL")  # Set this in Render Environment Variables
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
 def get_conn():
     return psycopg2.connect(DATABASE_URL)
 
-# --- Cloudinary setup ---
-cloudinary.config(
-    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.environ.get("CLOUDINARY_API_KEY"),
-    api_secret=os.environ.get("CLOUDINARY_API_SECRET")
-)
-
-# --- Initialize DB ---
-def init_db():
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-            CREATE TABLE IF NOT EXISTS products (
-                id SERIAL PRIMARY KEY,
-                name TEXT NOT NULL,
-                image TEXT NOT NULL,
-                initial_price REAL NOT NULL,
-                current_price REAL NOT NULL
-            )
-            """)
-        conn.commit()
-
-init_db()
-
-# --- Routes ---
+# --- routes ---
 @app.route('/')
 def home():
     return render_template('tracker.html')
@@ -43,64 +19,76 @@ def home():
 @app.route('/upload', methods=['POST'])
 def upload():
     name = request.form['product-name']
-    initial_price = float(request.form['initial-price'])
-    current_price = float(request.form['current-price'])
+    initial_price = request.form['initial-price']
+    current_price = request.form['current-price']
+    ad_value = request.form.get('ad-value', 0)
+    active_until = request.form.get('active-until', '')
     image = request.files['product-image']
 
     if image:
-        # Upload image to Cloudinary
-        result = cloudinary.uploader.upload(image)
-        image_url = result['secure_url']
+        image_path = os.path.join(app.config['UPLOAD_FOLDER'], image.filename)
+        image.save(image_path)
 
         with get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    INSERT INTO products (name, image, initial_price, current_price)
-                    VALUES (%s, %s, %s, %s)
-                """, (name, image_url, initial_price, current_price))
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO products (name, image, initial_price, current_price, ad_value, active_until)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (name, image.filename, initial_price, current_price, ad_value, active_until))
             conn.commit()
 
         return jsonify({
-            'name': name,
-            'image': image_url,
-            'initial_price': initial_price,
-            'current_price': current_price
+            'name': name, 'image': image.filename,
+            'initial_price': initial_price, 'current_price': current_price,
+            'ad_value': ad_value, 'active_until': active_until
         })
     return 'No image uploaded', 400
 
 @app.route('/products')
 def products():
     with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT id, name, image, initial_price, current_price FROM products ORDER BY id DESC")
-            rows = cur.fetchall()
-    products = [{
-        'id': r[0],
-        'name': r[1],
-        'image': r[2],
-        'initial_price': r[3],
-        'current_price': r[4]
-    } for r in rows]
+        cur = conn.cursor()
+        cur.execute("SELECT id, name, image, initial_price, current_price, ad_value, active_until FROM products")
+        rows = cur.fetchall()
+    products = [
+        {
+            'id': r[0], 'name': r[1], 'image': r[2],
+            'initial_price': r[3], 'current_price': r[4],
+            'ad_value': r[5], 'active_until': r[6]
+        } for r in rows
+    ]
     return jsonify(products)
 
 @app.route('/update/<int:product_id>', methods=['POST'])
 def update_product(product_id):
-    new_price = float(request.form['current-price'])
+    current_price = request.form.get('current-price')
+    ad_value = request.form.get('ad-value')
+    active_until = request.form.get('active-until')
+
     with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("UPDATE products SET current_price = %s WHERE id = %s", (new_price, product_id))
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE products
+            SET current_price = COALESCE(%s, current_price),
+                ad_value = COALESCE(%s, ad_value),
+                active_until = COALESCE(%s, active_until)
+            WHERE id = %s
+        """, (current_price, ad_value, active_until, product_id))
         conn.commit()
-    return jsonify({'id': product_id, 'current_price': new_price})
+
+    return jsonify({'status': 'updated', 'id': product_id})
 
 @app.route('/delete/<int:product_id>', methods=['POST'])
 def delete_product(product_id):
     with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM products WHERE id = %s", (product_id,))
+        cur = conn.cursor()
+        cur.execute("DELETE FROM products WHERE id = %s", (product_id,))
         conn.commit()
     return jsonify({'status': 'deleted', 'id': product_id})
 
-# --- Run Flask ---
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)

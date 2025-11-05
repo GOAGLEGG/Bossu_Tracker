@@ -15,22 +15,32 @@
     <form id="tracker-form" enctype="multipart/form-data" method="POST" action="javascript:void(0);">
       <div class="form-group">
         <label for="product-image">Product Image:</label>
-        <input type="file" id="product-image" name="product-image" accept="image/*" required />
+        <input type="file" id="product-image" name="product-image" accept="image/*" />
       </div>
 
       <div class="form-group">
         <label for="product-name">Product Name:</label>
-        <input type="text" id="product-name" name="product-name" placeholder="Enter product name" required />
+        <input type="text" id="product-name" name="product-name" placeholder="Enter product name" />
       </div>
 
       <div class="form-group">
         <label for="initial-price">Initial Price:</label>
-        <input type="number" id="initial-price" name="initial-price" placeholder="Enter initial price" step="0.01" required />
+        <input type="number" id="initial-price" name="initial-price" placeholder="Enter initial price" step="0.01" />
       </div>
 
       <div class="form-group">
         <label for="current-price">Current Price:</label>
-        <input type="number" id="current-price" name="current-price" placeholder="Enter current price" step="0.01" required />
+        <input type="number" id="current-price" name="current-price" placeholder="Enter current price" step="0.01" />
+      </div>
+
+      <div class="form-group">
+        <label for="ad-value">Ad Value:</label>
+        <input type="number" id="ad-value" name="ad-value" placeholder="Enter ad value" step="0.01" />
+      </div>
+
+      <div class="form-group">
+        <label for="active-until">Active Until:</label>
+        <input type="date" id="active-until" name="active-until" />
       </div>
 
       <button type="submit">Add Product</button>
@@ -46,6 +56,6 @@
     <p>&copy; 2025 Product Tracker</p>
   </footer>
 
-  <script src="{{ url_for('static', filename='js/tracker.js') }}"></script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
