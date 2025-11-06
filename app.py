@@ -83,9 +83,7 @@ def update_product(product_id):
         fields.append("current_price = %s")
         values.append(current_price)
     if ad_value:
-        fields.append("ad_value = %s")
-        fields.append("current_price = current_price - %s")
-        values.append(ad_value)
+        fields.append("ad_value = ad_value + %s")
         values.append(ad_value)
     if active_until:
         fields.append("active_until = %s")
