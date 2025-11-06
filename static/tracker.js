@@ -38,7 +38,7 @@ function displayProduct(product) {
   const profit = (product.current_price - product.initial_price - (product.ad_value || 0)).toFixed(2);
 
   div.innerHTML = `
-    ${product.image ? `<img src="/uploads/${product.image}" alt="${product.name}">` : ''}
+    ${product.image ? `<img src="${product.image}" alt="${product.name}" />` : ''}
     <h3>${product.name || 'Unnamed Product'}</h3>
     <p>Initial: $${product.initial_price || 0}</p>
     <p>Current: $${product.current_price || 0}</p>

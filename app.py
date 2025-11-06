@@ -1,5 +1,15 @@
 import os
 import psycopg2
+
+import cloudinary
+import cloudinary.uploader
+
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET')
+)
+
 from flask import Flask, render_template, request, jsonify, send_from_directory
 
 app = Flask(__name__)
@@ -18,35 +28,32 @@ def home():
 
 @app.route('/upload', methods=['POST'])
 def upload():
-    name = request.form.get('product-name', '')
-    initial_price = float(request.form.get('initial-price') or 0)
-    current_price = float(request.form.get('current-price') or 0)
-    ad_value = float(request.form.get('ad-value') or 0)
-    active_until = request.form.get('active-until') or '1001-01-01'
-
+    name = request.form.get('product-name')
+    initial_price = request.form.get('initial-price') or None
+    current_price = request.form.get('current-price') or None
+    ad_value = request.form.get('ad-value') or None
+    active_until = request.form.get('active-until') or None
     image = request.files.get('product-image')
-    image_filename = None
+
+    image_url = None
     if image:
-        image_filename = image.filename
-        image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
-        image.save(image_path)
+        upload_result = cloudinary.uploader.upload(image)
+        image_url = upload_result['secure_url']
 
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO products (name, image, initial_price, current_price, ad_value, active_until)
             VALUES (%s, %s, %s, %s, %s, %s)
-        """, (name, image_filename, initial_price, current_price, ad_value, active_until))
+        """, (name, image_url, initial_price, current_price, ad_value, active_until))
         conn.commit()
 
     return jsonify({
-        'name': name, 
-        'image': image_filename,
-        'initial_price': initial_price,
-        'current_price': current_price,
-        'ad_value': ad_value,
-        'active_until': active_until
+        'name': name, 'image': image_url,
+        'initial_price': initial_price, 'current_price': current_price,
+        'ad_value': ad_value, 'active_until': active_until
     })
+
 
 @app.route('/products')
 def products():
@@ -65,9 +72,9 @@ def products():
 
 @app.route('/update/<int:product_id>', methods=['POST'])
 def update_product(product_id):
-    current_price = request.form.get('current-price')
-    ad_value = request.form.get('ad-value')
-    active_until = request.form.get('active-until')
+    current_price = request.form.get('current-price') or None
+    ad_value = request.form.get('ad-value') or None
+    active_until = request.form.get('active-until') or None
 
     with get_conn() as conn:
         cur = conn.cursor()
@@ -81,6 +88,22 @@ def update_product(product_id):
         conn.commit()
 
     return jsonify({'status': 'updated', 'id': product_id})
+
+@app.route('/update_image/<int:product_id>', methods=['POST'])
+def update_image(product_id):
+    image = request.files.get('product-image')
+    if not image:
+        return jsonify({'error': 'No image uploaded'}), 400
+
+    upload_result = cloudinary.uploader.upload(image)
+    image_url = upload_result['secure_url']
+
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute("UPDATE products SET image = %s WHERE id = %s", (image_url, product_id))
+        conn.commit()
+
+    return jsonify({'status': 'image updated', 'id': product_id, 'image_url': image_url})
 
 @app.route('/delete/<int:product_id>', methods=['POST'])
 def delete_product(product_id):
