@@ -72,19 +72,32 @@ def products():
 
 @app.route('/update/<int:product_id>', methods=['POST'])
 def update_product(product_id):
-    current_price = request.form.get('current-price') or None
-    ad_value = request.form.get('ad-value') or None
-    active_until = request.form.get('active-until') or None
+    fields = []
+    values = []
+
+    current_price = request.form.get('current-price')
+    ad_value = request.form.get('ad-value')
+    active_until = request.form.get('active-until')
+
+    if current_price:
+        fields.append("current_price = %s")
+        values.append(current_price)
+    if ad_value:
+        fields.append("ad_value = %s")
+        values.append(ad_value)
+    if active_until:
+        fields.append("active_until = %s")
+        values.append(active_until)
+
+    if not fields:
+        return jsonify({'status': 'no fields to update'}), 400
+
+    query = f"UPDATE products SET {', '.join(fields)} WHERE id = %s"
+    values.append(product_id)
 
     with get_conn() as conn:
         cur = conn.cursor()
-        cur.execute("""
-            UPDATE products
-            SET current_price = COALESCE(%s, current_price),
-                ad_value = COALESCE(%s, ad_value),
-                active_until = COALESCE(%s, active_until)
-            WHERE id = %s
-        """, (current_price, ad_value, active_until, product_id))
+        cur.execute(query, tuple(values))
         conn.commit()
 
     return jsonify({'status': 'updated', 'id': product_id})
